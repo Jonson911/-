@@ -3,142 +3,551 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>焦虑缓解效能追踪器</title>
+    <title>焦虑缓解效能追踪器 v2.0</title>
+    
+    <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 引入 Phosphor Icons (用于图标) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- PWA 配置关联 (为将来的 App 封装做准备) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffffff">
+    <!-- 使用一个通用的图标作为 apple-touch-icon 示例 -->
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2913/2913465.png">
+
+    <!-- 配置 Tailwind 主题：使用柔和的鼠尾草绿/青色调 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sage: {
+                            50: '#f2fcf9',
+                            100: '#dff9f0',
+                            200: '#c0f0e0',
+                            300: '#92e2cc',
+                            400: '#5bcaba',
+                            500: '#38b0a0', // 主色
+                            600: '#2a8f83',
+                            700: '#25736b',
+                            800: '#215c56',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        body { font-family: 'Microsoft YaHei', sans-serif; background-color: #f0f9ff; }
-        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        /* 自定义滑块样式，使其看起来更柔和 */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #38b0a0;
+            cursor: pointer;
+            margin-top: -8px; 
+            box-shadow: 0 2px 6px rgba(56, 176, 160, 0.4);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #e2e8f0;
+            border-radius: 2px;
+        }
+        /* 去除数字输入框的箭头，优化移动端体验 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
     </style>
 </head>
-<body class="text-gray-700 p-4 md:p-8">
+<body class="bg-slate-50 text-slate-600 font-sans min-h-screen pb-10">
 
-    <div class="max-w-3xl mx-auto">
-        
-        <header class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-blue-600 mb-2">🌟 焦虑缓解效能追踪</h1>
-            <p class="text-sm text-gray-500">记录当下，看见改变</p>
-        </header>
+    <!-- 顶部 Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="max-w-3xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="ph-fill ph-heartbeat text-sage-500 text-2xl"></i>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-700 tracking-tight leading-none">InnerCalm</h1>
+                    <span class="text-[10px] text-slate-400 tracking-wider">生理与情绪追踪</span>
+                </div>
+            </div>
+            <!-- 重置数据按钮，方便调试或重置 -->
+            <button onclick="clearAllData()" class="text-xs text-slate-400 hover:text-red-400 transition-colors">
+                重置数据
+            </button>
+        </div>
+    </header>
 
-        <div class="card p-6 mb-8">
-            <h2 class="text-xl font-semibold mb-4 border-l-4 border-blue-500 pl-3">📝 新的记录</h2>
+    <main class="max-w-3xl mx-auto px-4 py-8 space-y-8">
+
+        <!-- 1. 记录评估表单 -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="bg-sage-50 px-6 py-3 border-b border-sage-100 flex items-center justify-between">
+                <span class="font-semibold text-sage-800 text-sm flex items-center gap-2">
+                    <i class="ph-bold ph-plus-circle"></i> 新的练习记录
+                </span>
+                <span class="text-xs text-sage-600" id="currentDate"></span>
+            </div>
             
-            <form id="trackerForm" class="space-y-4">
+            <form id="trackerForm" class="p-6 space-y-8">
+                
+                <!-- 方法选择 -->
                 <div>
-                    <label class="block text-sm font-medium mb-1">当前焦虑程度 (1-10)</label>
-                    <input type="range" id="anxietyLevel" min="1" max="10" value="5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" oninput="document.getElementById('levelVal').innerText = this.value">
-                    <div class="flex justify-between text-xs text-gray-400 mt-1">
-                        <span>😌 平静(1)</span>
-                        <span class="text-blue-600 font-bold text-lg" id="levelVal">5</span>
-                        <span>🤯 极度(10)</span>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">使用了什么放松方法？</label>
+                    <select id="methodSelect" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-sage-500 focus:ring-1 focus:ring-sage-500 outline-none transition-all text-slate-700 cursor-pointer">
+                        <option value="4-7-8 呼吸法">🌬️ 4-7-8 呼吸法</option>
+                        <option value="渐进式肌肉放松 (PMR)">💪 渐进式肌肉放松 (PMR)</option>
+                        <option value="正念冥想">🧘 正念冥想</option>
+                        <option value="瑜伽">🤸 瑜伽</option>
+                        <option value="有氧运动">🏃 有氧运动</option>
+                        <option value="书写疗愈">✍️ 书写疗愈</option>
+                        <option value="听音乐">🎧 听音乐</option>
+                        <option value="other">✨ 其他...</option>
+                    </select>
+                    <input type="text" id="customMethodInput" class="mt-2 w-full p-3 rounded-xl bg-white border border-slate-200 focus:border-sage-500 outline-none hidden" placeholder="请输入你的方法名称">
+                </div>
+
+                <!-- 对比区域：BEFORE vs AFTER -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
+                    <!-- 分隔线 (桌面端) -->
+                    <div class="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-slate-100 -ml-px"></div>
+
+                    <!-- Relax Before (放松前) -->
+                    <div class="space-y-6">
+                        <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+                            <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span> 
+                            <h3 class="font-bold text-slate-700">放松前 (Before)</h3>
+                        </div>
+                        
+                        <!-- 焦虑度滑块 -->
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <label class="text-xs font-bold text-slate-500 uppercase">主观焦虑 (SUDs) 0-10</label>
+                                <span class="text-lg font-bold text-slate-600 leading-none" id="val-anxiety-before">5</span>
+                            </div>
+                            <input type="range" id="anxietyBefore" min="0" max="10" value="5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <!-- 生理指标组 (心率, 血压) -->
+                        <div class="bg-slate-50 p-4 rounded-xl space-y-4">
+                            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">生理指标 (选填)</div>
+                            
+                            <!-- 心率 -->
+                            <div class="flex items-center justify-between gap-4">
+                                <label class="text-sm text-slate-600 min-w-[40px] flex items-center gap-1"><i class="ph ph-heartbeat text-red-500"></i> 心率</label>
+                                <div class="relative w-full">
+                                    <input type="number" id="hrBefore" placeholder="BPM" class="w-full p-2 pr-8 text-right rounded-lg border border-slate-200 text-sm focus:border-sage-400 outline-none bg-white">
+                                    <span class="absolute right-2 top-2 text-xs text-slate-400">次/分</span>
+                                </div>
+                            </div>
+
+                            <!-- 血压 -->
+                            <div class="flex items-center justify-between gap-2">
+                                <label class="text-sm text-slate-600 min-w-[40px] flex items-center gap-1"><i class="ph ph-hand-tap text-blue-500"></i> 血压</label>
+                                <div class="flex gap-2 w-full">
+                                    <input type="number" id="bpSysBefore" placeholder="收缩压" class="w-1/2 p-2 text-center rounded-lg border border-slate-200 text-sm focus:border-sage-400 outline-none bg-white">
+                                    <span class="text-slate-300 pt-1">/</span>
+                                    <input type="number" id="bpDiaBefore" placeholder="舒张压" class="w-1/2 p-2 text-center rounded-lg border border-slate-200 text-sm focus:border-sage-400 outline-none bg-white">
+                                    <span class="text-slate-300 pt-1 text-xs">mmHg</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Relax After (放松后) -->
+                    <div class="space-y-6">
+                        <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+                            <span class="w-2.5 h-2.5 rounded-full bg-sage-500"></span> 
+                            <h3 class="font-bold text-sage-700">放松后 (After)</h3>
+                        </div>
+                        
+                        <!-- 焦虑度滑块 -->
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <label class="text-xs font-bold text-slate-500 uppercase">主观焦虑 (SUDs) 0-10</label>
+                                <span class="text-lg font-bold text-sage-600 leading-none" id="val-anxiety-after">3</span>
+                            </div>
+                            <input type="range" id="anxietyAfter" min="0" max="10" value="3" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-sage-500">
+                        </div>
+
+                        <!-- 生理指标组 (心率, 血压) -->
+                        <div class="bg-sage-50/50 p-4 rounded-xl space-y-4 border border-sage-100">
+                            <div class="text-xs font-bold text-sage-400 uppercase tracking-wider mb-1">生理指标 (选填)</div>
+                            
+                            <!-- 心率 -->
+                            <div class="flex items-center justify-between gap-4">
+                                <label class="text-sm text-slate-600 min-w-[40px] flex items-center gap-1"><i class="ph ph-heartbeat text-red-500"></i> 心率</label>
+                                <div class="relative w-full">
+                                    <input type="number" id="hrAfter" placeholder="BPM" class="w-full p-2 pr-8 text-right rounded-lg border border-sage-200 text-sm focus:border-sage-400 focus:ring-1 focus:ring-sage-400 outline-none bg-white">
+                                    <span class="absolute right-2 top-2 text-xs text-slate-400">次/分</span>
+                                </div>
+                            </div>
+
+                            <!-- 血压 -->
+                            <div class="flex items-center justify-between gap-2">
+                                <label class="text-sm text-slate-600 min-w-[40px] flex items-center gap-1"><i class="ph ph-hand-tap text-blue-500"></i> 血压</label>
+                                <div class="flex gap-2 w-full">
+                                    <input type="number" id="bpSysAfter" placeholder="收缩压" class="w-1/2 p-2 text-center rounded-lg border border-sage-200 text-sm focus:border-sage-400 focus:ring-1 focus:ring-sage-400 outline-none bg-white">
+                                    <span class="text-slate-300 pt-1">/</span>
+                                    <input type="number" id="bpDiaAfter" placeholder="舒张压" class="w-1/2 p-2 text-center rounded-lg border border-sage-200 text-sm focus:border-sage-400 focus:ring-1 focus:ring-sage-400 outline-none bg-white">
+                                    <span class="text-slate-300 pt-1 text-xs">mmHg</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">高压 (收缩压)</label>
-                        <input type="number" id="sysBP" placeholder="例如: 120" class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-300 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">低压 (舒张压)</label>
-                        <input type="number" id="diaBP" placeholder="例如: 80" class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-300 outline-none">
-                    </div>
-                </div>
-
+                <!-- 备注 (选填) -->
                 <div>
-                    <label class="block text-sm font-medium mb-1">如果你做了什么来缓解 (可选)</label>
-                    <input type="text" id="activity" placeholder="例如：深呼吸、散步、冥想、吃药..." class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-300 outline-none">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-1">备注 / 感受 (可选)</label>
+                    <textarea id="notes" rows="2" class="w-full p-3 rounded-xl bg-slate-50 border-none text-sm focus:ring-1 focus:ring-sage-300 resize-none placeholder-slate-400" placeholder="记录下此刻的想法，或者身体的具体感受..."></textarea>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium mb-1">备注/感受</label>
-                    <textarea id="note" rows="2" placeholder="简单记录当下的想法..." class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-300 outline-none"></textarea>
-                </div>
-
-                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-bold shadow-md">
-                    保存记录
+                <!-- 提交按钮 -->
+                <button type="submit" class="w-full bg-sage-500 hover:bg-sage-600 text-white font-bold py-4 rounded-xl transition-all transform active:scale-[0.99] shadow-lg shadow-sage-200 flex justify-center items-center gap-2 text-base">
+                    <i class="ph-bold ph-check-circle text-xl"></i>
+                    记录并分析
                 </button>
             </form>
-        </div>
+        </section>
 
-        <div class="card p-6 mb-8">
-            <h2 class="text-xl font-semibold mb-4 border-l-4 border-purple-500 pl-3">📊 趋势分析</h2>
-            <canvas id="trendChart" height="200"></canvas>
-        </div>
-
-        <div class="card p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold border-l-4 border-green-500 pl-3">🗂️ 历史记录</h2>
-                <button onclick="clearData()" class="text-xs text-red-400 hover:text-red-600 underline">清空数据</button>
+        <!-- 2. 智能分析仪表盘 -->
+        <section id="dashboardSection" class="space-y-8 hidden">
+            
+            <!-- 效能排行榜 -->
+            <div>
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="ph-fill ph-trophy text-yellow-400"></i> 最佳减压方法 Top 3
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="leaderboardContainer">
+                    <!-- JS 动态插入排行榜卡片 -->
+                </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm text-left text-gray-500">
-                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-3">时间</th>
-                            <th class="px-4 py-3">焦虑值</th>
-                            <th class="px-4 py-3">血压</th>
-                            <th class="px-4 py-3">行动/备注</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyList">
-                        </tbody>
-                </table>
+
+            <!-- 趋势图表 -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="font-bold text-slate-700">焦虑程度变化趋势 (SUDs)</h3>
+                        <p class="text-xs text-slate-400">越低代表越平静</p>
+                    </div>
+                    <div class="flex gap-4 text-xs font-medium">
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>放松前</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sage-500"></span>放松后</span>
+                    </div>
+                </div>
+                <div class="h-64 w-full">
+                    <canvas id="trendChart"></canvas>
+                </div>
             </div>
+        </section>
+
+        <!-- 3. 详细历史记录 -->
+        <section id="historySection" class="hidden">
+            <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <i class="ph-fill ph-clock-counter-clockwise text-slate-400"></i> 详细记录
+            </h3>
+            <div id="historyList" class="space-y-4">
+                <!-- JS 动态插入历史记录卡片 -->
+            </div>
+        </section>
+
+        <!-- 空状态提示 -->
+        <div id="emptyState" class="text-center py-16 opacity-60">
+            <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="ph-duotone ph-notebook text-3xl text-slate-400"></i>
+            </div>
+            <p class="text-slate-500 font-medium">暂无数据</p>
+            <p class="text-xs text-slate-400 mt-1">完成第一次练习来查看分析</p>
         </div>
 
-    </div>
+    </main>
 
     <script>
-        // 初始化数据
-        let records = JSON.parse(localStorage.getItem('anxiety_records')) || [];
-        const form = document.getElementById('trackerForm');
-        const historyList = document.getElementById('historyList');
+        // --- 全局配置与状态管理 ---
+        const STORAGE_KEY = 'anxiety_tracker_data_v2'; 
+        let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         let chartInstance = null;
 
-        // 渲染页面
-        function render() {
-            // 1. 渲染列表
-            historyList.innerHTML = '';
-            // 按时间倒序排列
-            const sortedRecords = [...records].reverse(); 
-            
-            sortedRecords.forEach(record => {
-                const row = document.createElement('tr');
-                row.className = "border-b hover:bg-gray-50";
-                const date = new Date(record.timestamp).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                
-                // 焦虑值的颜色标记
-                let anxietyColor = record.anxiety >= 8 ? 'text-red-600 font-bold' : (record.anxiety <= 3 ? 'text-green-600' : 'text-yellow-600');
-                
-                row.innerHTML = `
-                    <td class="px-4 py-3">${date}</td>
-                    <td class="px-4 py-3 ${anxietyColor}">${record.anxiety}</td>
-                    <td class="px-4 py-3">${record.sysBP || '-'} / ${record.diaBP || '-'}</td>
-                    <td class="px-4 py-3">
-                        <div class="font-medium text-gray-800">${record.activity || '-'}</div>
-                        <div class="text-xs text-gray-400">${record.note || ''}</div>
-                    </td>
-                `;
-                historyList.appendChild(row);
-            });
+        // --- UI 事件绑定 ---
+        const dateDisplay = document.getElementById('currentDate');
+        dateDisplay.textContent = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
 
-            // 2. 渲染图表
-            updateChart();
+        // 绑定滑块数值显示
+        ['anxietyBefore', 'anxietyAfter'].forEach(id => {
+            const el = document.getElementById(id);
+            const display = document.getElementById(`val-${id.replace(/[A-Z]/g, l => '-' + l.toLowerCase())}`);
+            el.addEventListener('input', (e) => {
+                display.textContent = e.target.value;
+                if(id === 'anxietyAfter') {
+                    // 放松后分数低，颜色更积极
+                    display.className = e.target.value < 4 
+                        ? "text-lg font-bold text-sage-600 leading-none" 
+                        : "text-lg font-bold text-yellow-600 leading-none";
+                }
+            });
+        });
+
+        // 方法选择联动
+        const methodSelect = document.getElementById('methodSelect');
+        const customMethodInput = document.getElementById('customMethodInput');
+        methodSelect.addEventListener('change', (e) => {
+            customMethodInput.classList.toggle('hidden', e.target.value !== 'other');
+            if (e.target.value === 'other') customMethodInput.focus();
+        });
+
+        // --- 核心逻辑：数据存储与计算 ---
+
+        // 提交处理
+        document.getElementById('trackerForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            let method = methodSelect.value === 'other' ? (customMethodInput.value.trim() || '自定义') : methodSelect.value;
+
+            // 辅助函数：解析数字输入，为空则返回 null
+            const parseNum = (id) => {
+                const val = document.getElementById(id).value;
+                return val ? parseInt(val) : null;
+            };
+
+            const newEntry = {
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
+                method: method,
+                sudsBefore: parseNum('anxietyBefore') || 0,
+                sudsAfter: parseNum('anxietyAfter') || 0,
+                
+                // 生理数据
+                hrBefore: parseNum('hrBefore'),
+                hrAfter: parseNum('hrAfter'),
+                bpSysBefore: parseNum('bpSysBefore'),
+                bpDiaBefore: parseNum('bpDiaBefore'),
+                bpSysAfter: parseNum('bpSysAfter'),
+                bpDiaAfter: parseNum('bpDiaAfter'),
+                
+                notes: document.getElementById('notes').value.trim()
+            };
+
+            // 计算主要指标变化
+            newEntry.sudsDrop = newEntry.sudsBefore - newEntry.sudsAfter;
+
+            entries.unshift(newEntry);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+
+            resetForm();
+            renderApp();
+            
+            // 简单反馈
+            const btn = e.submitter;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<i class="ph-bold ph-check"></i> 已保存`;
+            btn.classList.add('bg-green-600');
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.remove('bg-green-600');
+            }, 2000);
+        });
+
+        function resetForm() {
+            document.getElementById('trackerForm').reset();
+            // 重置滑块的显示值到默认
+            document.getElementById('anxietyBefore').value = '5';
+            document.getElementById('anxietyAfter').value = '3';
+            document.getElementById('val-anxiety-before').textContent = '5';
+            document.getElementById('val-anxiety-after').textContent = '3';
+            methodSelect.value = "4-7-8 呼吸法";
+            customMethodInput.classList.add('hidden');
         }
 
-        function updateChart() {
-            const ctx = document.getElementById('trendChart').getContext('2d');
-            // 只取最近10条数据方便展示
-            const recentRecords = records.slice(-15); 
-            
-            const labels = recentRecords.map(r => new Date(r.timestamp).toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}));
-            const anxietyData = recentRecords.map(r => r.anxiety);
-            const sysBPData = recentRecords.map(r => r.sysBP);
+        // --- UI 渲染逻辑 ---
 
-            if (chartInstance) {
-                chartInstance.destroy();
+        function renderApp() {
+            const hasData = entries.length > 0;
+            document.getElementById('emptyState').classList.toggle('hidden', hasData);
+            document.getElementById('dashboardSection').classList.toggle('hidden', !hasData);
+            document.getElementById('historySection').classList.toggle('hidden', !hasData);
+
+            if (hasData) {
+                renderHistory();
+                renderStats();
+                renderChart();
             }
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('historyList');
+            container.innerHTML = '';
+
+            entries.slice(0, 20).forEach(entry => { // 显示最近20条
+                const date = new Date(entry.timestamp);
+                const timeStr = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                const dateStr = date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+
+                // 构建生理数据变化 UI
+                let physioHtml = '';
+                
+                // 心率显示
+                if (entry.hrBefore && entry.hrAfter) {
+                    const diff = entry.hrBefore - entry.hrAfter;
+                    const colorClass = diff > 0 ? 'text-sage-600' : (diff < 0 ? 'text-red-400' : 'text-slate-400'); // 心率下降是好的
+                    physioHtml += `
+                        <div class="flex justify-between items-center text-xs mt-1">
+                            <span class="text-slate-400 w-12">心率</span>
+                            <span class="font-mono text-slate-600">${entry.hrBefore}→${entry.hrAfter}</span>
+                            <span class="${colorClass} w-8 text-right font-medium">${diff > 0 ? '↓'+diff : (diff < 0 ? '↑'+Math.abs(diff) : '-')}</span>
+                        </div>`;
+                }
+
+                // 血压显示
+                if (entry.bpSysBefore && entry.bpSysAfter) {
+                    const sysDiff = entry.bpSysBefore - entry.bpSysAfter;
+                    const diaDiff = entry.bpDiaBefore - entry.bpDiaAfter;
+                    // 以收缩压下降为主要积极指标
+                    const colorClass = sysDiff > 0 ? 'text-sage-600' : 'text-slate-400';
+                    
+                    physioHtml += `
+                        <div class="flex justify-between items-center text-xs mt-1">
+                            <span class="text-slate-400 w-12">血压</span>
+                            <span class="font-mono text-slate-600 tracking-tighter">
+                                ${entry.bpSysBefore}/${entry.bpDiaBefore}→${entry.bpSysAfter}/${entry.bpDiaAfter}
+                            </span>
+                            <span class="${colorClass} w-8 text-right font-medium">${sysDiff > 0 ? '↓' : ''}</span>
+                        </div>`;
+                }
+
+                // 如果没有生理数据，显示提示
+                if (!physioHtml) physioHtml = '<div class="text-xs text-slate-300 italic mt-1">未记录生理指标</div>';
+
+                const sudsDropBadge = entry.sudsDrop > 0 
+                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sage-100 text-sage-700">下降 ${entry.sudsDrop} 点</span>`
+                    : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500">持平/略升</span>`;
+
+
+                const html = `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-all">
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <!-- 左侧：方法与备注 -->
+                            <div class="flex items-center md:items-start gap-3 md:w-1/3 shrink-0">
+                                <div class="w-10 h-10 rounded-full bg-sage-50 flex items-center justify-center text-xl shrink-0">
+                                    ${getMethodIcon(entry.method)}
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-700 text-sm leading-tight mb-0.5">${entry.method}</h4>
+                                    <p class="text-xs text-slate-400">${dateStr} ${timeStr}</p>
+                                    ${entry.notes ? `<p class="text-xs text-slate-500 mt-1 bg-slate-50 p-1.5 rounded line-clamp-2">${entry.notes}</p>` : ''}
+                                </div>
+                            </div>
+
+                            <!-- 中间：焦虑指数变化 (核心指标) -->
+                            <div class="flex-1 border-t md:border-t-0 md:border-l border-slate-100 pt-3 md:pt-0 md:pl-4 flex flex-col justify-center">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold text-slate-400 uppercase">焦虑度 (SUDs)</span>
+                                    ${sudsDropBadge}
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <!-- 进度条可视化 SUDs -->
+                                    <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden flex">
+                                        <div class="bg-slate-300 h-full" style="width: ${entry.sudsBefore * 10}%"></div>
+                                    </div>
+                                    <i class="ph-bold ph-arrow-right text-slate-300 text-xs"></i>
+                                    <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden flex">
+                                        <div class="bg-sage-500 h-full" style="width: ${entry.sudsAfter * 10}%"></div>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between text-xs text-slate-500 mt-1 font-mono">
+                                    <span>${entry.sudsBefore}</span>
+                                    <span>${entry.sudsAfter}</span>
+                                </div>
+                            </div>
+
+                            <!-- 右侧：生理数据 -->
+                            <div class="md:w-1/3 border-t md:border-t-0 md:border-l border-slate-100 pt-3 md:pt-0 md:pl-4">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">生理变化</div>
+                                ${physioHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function renderStats() {
+            const methodStats = {};
+
+            // 聚合数据，计算平均下降值
+            entries.forEach(e => {
+                if (!methodStats[e.method]) {
+                    methodStats[e.method] = { count: 0, totalDrop: 0, method: e.method };
+                }
+                methodStats[e.method].count++;
+                methodStats[e.method].totalDrop += e.sudsDrop;
+            });
+
+            // 排序并取前3
+            const ranking = Object.values(methodStats)
+                .map(item => ({
+                    ...item,
+                    avgDrop: (item.totalDrop / item.count).toFixed(1)
+                }))
+                .filter(item => item.count >= 1 && item.avgDrop > 0) // 过滤掉无效方法
+                .sort((a, b) => b.avgDrop - a.avgDrop)
+                .slice(0, 3);
+
+            const container = document.getElementById('leaderboardContainer');
+            container.innerHTML = '';
+
+            ranking.forEach((item, index) => {
+                const html = `
+                    <div class="bg-sage-50/50 border border-sage-100 p-4 rounded-xl flex items-center justify-between relative overflow-hidden">
+                        <div class="absolute -right-4 -top-4 text-6xl opacity-10 select-none">${getMethodIcon(item.method)}</div>
+                        <div>
+                            <div class="text-xs text-sage-600 font-bold mb-1">No.${index + 1} 推荐</div>
+                            <div class="font-bold text-slate-700 truncate max-w-[100px] sm:max-w-full">${item.method}</div>
+                            <div class="text-[10px] text-slate-400 mt-1">已练习 ${item.count} 次</div>
+                        </div>
+                        <div class="text-right z-10">
+                            <div class="text-xl font-bold text-sage-600">-${item.avgDrop}</div>
+                            <div class="text-[10px] text-sage-400">平均降幅</div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+            // 如果排行榜为空，添加一个友好的提示
+            if(ranking.length === 0) {
+                 container.innerHTML = '<div class="col-span-full text-center py-4 text-slate-400 text-sm">目前还没有产生积极效果的数据，继续尝试！</div>';
+            }
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            const chartData = [...entries].reverse().slice(-15); // 显示最近15次记录
+            
+            const labels = chartData.map(e => {
+                const d = new Date(e.timestamp);
+                return `${d.getMonth()+1}/${d.getDate()}`;
+            });
+            const dataBefore = chartData.map(e => e.sudsBefore);
+            const dataAfter = chartData.map(e => e.sudsAfter);
+
+            if (chartInstance) chartInstance.destroy();
 
             chartInstance = new Chart(ctx, {
                 type: 'line',
@@ -146,87 +555,103 @@
                     labels: labels,
                     datasets: [
                         {
-                            label: '焦虑程度',
-                            data: anxietyData,
-                            borderColor: 'rgb(37, 99, 235)', // Blue
-                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            label: '放松前',
+                            data: dataBefore,
+                            borderColor: '#cbd5e1', // 灰色
                             borderWidth: 2,
-                            tension: 0.3,
-                            yAxisID: 'y'
+                            borderDash: [4, 4],
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            tension: 0.3
                         },
                         {
-                            label: '高压(收缩压)',
-                            data: sysBPData,
-                            borderColor: 'rgb(220, 38, 38)', // Red
-                            borderWidth: 1,
-                            borderDash: [5, 5],
-                            pointRadius: 2,
-                            yAxisID: 'y1',
-                            hidden: false
+                            label: '放松后',
+                            data: dataAfter,
+                            borderColor: '#38b0a0', // 绿色
+                            backgroundColor: 'rgba(56, 176, 160, 0.05)',
+                            borderWidth: 2,
+                            fill: true,
+                            pointBackgroundColor: '#fff',
+                            pointBorderColor: '#38b0a0',
+                            pointRadius: 4,
+                            tension: 0.3
                         }
                     ]
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            titleColor: '#1e293b',
+                            bodyColor: '#475569',
+                            borderColor: '#e2e8f0',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: true,
+                            boxWidth: 8,
+                            callbacks: {
+                                afterBody: function(tooltipItems) {
+                                    // 在 Tooltip 中显示生理数据详情
+                                    const index = tooltipItems[0].dataIndex;
+                                    const entry = chartData[index];
+                                    let lines = [];
+                                    if(entry.hrBefore && entry.hrAfter) {
+                                        const hrDrop = entry.hrBefore - entry.hrAfter;
+                                        lines.push(`心率: ${entry.hrBefore}→${entry.hrAfter} (${hrDrop > 0 ? '↓'+hrDrop : (hrDrop < 0 ? '↑'+Math.abs(hrDrop) : '无变化')})`);
+                                    }
+                                    if(entry.bpSysBefore && entry.bpSysAfter) {
+                                        lines.push(`血压: ${entry.bpSysBefore}/${entry.bpDiaBefore}→${entry.bpSysAfter}/${entry.bpDiaAfter}`);
+                                    }
+                                    return lines.length ? '\n\n— 生理数据 —\n' + lines.join('\n') : '';
+                                }
+                            }
+                        }
+                    },
                     scales: {
                         y: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
-                            min: 0,
+                            beginAtZero: true,
                             max: 10,
-                            title: { display: true, text: '焦虑指数' }
+                            grid: { color: '#f8fafc' },
+                            ticks: { font: {size: 10}, stepSize: 2 }
                         },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            min: 60,
-                            max: 200,
-                            grid: { drawOnChartArea: false }, // 不画网格线，保持干净
-                            title: { display: true, text: '血压(mmHg)' }
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: {size: 10}, maxRotation: 0 }
                         }
                     }
                 }
             });
         }
 
-        // 表单提交处理
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const newRecord = {
-                id: Date.now(),
-                timestamp: new Date().toISOString(),
-                anxiety: parseInt(document.getElementById('anxietyLevel').value),
-                sysBP: document.getElementById('sysBP').value,
-                diaBP: document.getElementById('diaBP').value,
-                activity: document.getElementById('activity').value,
-                note: document.getElementById('note').value
-            };
+        // 辅助函数：根据方法名返回 emoji 图标
+        function getMethodIcon(method) {
+            if (method.includes('呼吸')) return '🌬️';
+            if (method.includes('肌肉')) return '💪';
+            if (method.includes('冥想')) return '🧘';
+            if (method.includes('瑜伽')) return '🤸';
+            if (method.includes('运动')) return '🏃';
+            if (method.includes('书写')) return '✍️';
+            if (method.includes('音乐')) return '🎧';
+            return '✨';
+        }
 
-            records.push(newRecord);
-            localStorage.setItem('anxiety_records', JSON.stringify(records));
-            
-            form.reset();
-            // 重置滑块显示
-            document.getElementById('levelVal').innerText = '5';
-            document.getElementById('anxietyLevel').value = 5;
-            
-            render();
-        });
-
-        function clearData() {
-            if(confirm('确定要清空所有记录吗？此操作不可恢复。')) {
-                records = [];
-                localStorage.removeItem('anxiety_records');
-                render();
+        // 清除所有数据
+        function clearAllData() {
+            // 使用自定义模态框代替 alert(), 确保在 App 环境中可用性
+            const confirmation = window.confirm('确定要清除所有历史记录吗？此操作无法撤销。');
+            if(confirmation) {
+                localStorage.removeItem(STORAGE_KEY);
+                entries = [];
+                renderApp();
             }
         }
 
-        // 启动
-        render();
+        // 首次加载应用
+        renderApp();
     </script>
 </body>
 </html>
