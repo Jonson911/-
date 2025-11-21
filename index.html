@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>焦虑缓解效能追踪器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Microsoft YaHei', sans-serif; background-color: #f0f9ff; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+    </style>
+</head>
+<body class="text-gray-700 p-4 md:p-8">
+
+    <div class="max-w-3xl mx-auto">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-600 mb-2">🌟 焦虑缓解效能追踪</h1>
+            <p class="text-sm text-gray-500">记录当下，看见改变</p>
+        </header>
+
+        <div class="card p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4 border-l-4 border-blue-500 pl-3">📝 新的记录</h2>
+            
+            <form id="trackerForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">当前焦虑程度 (1-10)</label>
+                    <input type="range" id="anxietyLevel" min="1" max="10" value="5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" oninput="document.getElementById('levelVal').innerText = this.value">
+                    <div class="flex justify-between text-xs text-gray-400 mt-1">
+                        <span>😌 平静(1)</span>
+                        <span class="text-blue-600 font-bold text-lg" id="levelVal">5</span>
+                        <span>🤯 极度(10)</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">高压 (收缩压)</label>
+                        <input type="number" id="sysBP" placeholder="例如: 120" class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-300 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">低压 (舒张压)</label>
+                        <input type="number" id="diaBP" placeholder="例如: 80" class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-300 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">如果你做了什么来缓解 (可选)</label>
+                    <input type="text" id="activity" placeholder="例如：深呼吸、散步、冥想、吃药..." class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-300 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">备注/感受</label>
+                    <textarea id="note" rows="2" placeholder="简单记录当下的想法..." class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-300 outline-none"></textarea>
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-bold shadow-md">
+                    保存记录
+                </button>
+            </form>
+        </div>
+
+        <div class="card p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4 border-l-4 border-purple-500 pl-3">📊 趋势分析</h2>
+            <canvas id="trendChart" height="200"></canvas>
+        </div>
+
+        <div class="card p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold border-l-4 border-green-500 pl-3">🗂️ 历史记录</h2>
+                <button onclick="clearData()" class="text-xs text-red-400 hover:text-red-600 underline">清空数据</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3">时间</th>
+                            <th class="px-4 py-3">焦虑值</th>
+                            <th class="px-4 py-3">血压</th>
+                            <th class="px-4 py-3">行动/备注</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyList">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 初始化数据
+        let records = JSON.parse(localStorage.getItem('anxiety_records')) || [];
+        const form = document.getElementById('trackerForm');
+        const historyList = document.getElementById('historyList');
+        let chartInstance = null;
+
+        // 渲染页面
+        function render() {
+            // 1. 渲染列表
+            historyList.innerHTML = '';
+            // 按时间倒序排列
+            const sortedRecords = [...records].reverse(); 
+            
+            sortedRecords.forEach(record => {
+                const row = document.createElement('tr');
+                row.className = "border-b hover:bg-gray-50";
+                const date = new Date(record.timestamp).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                
+                // 焦虑值的颜色标记
+                let anxietyColor = record.anxiety >= 8 ? 'text-red-600 font-bold' : (record.anxiety <= 3 ? 'text-green-600' : 'text-yellow-600');
+                
+                row.innerHTML = `
+                    <td class="px-4 py-3">${date}</td>
+                    <td class="px-4 py-3 ${anxietyColor}">${record.anxiety}</td>
+                    <td class="px-4 py-3">${record.sysBP || '-'} / ${record.diaBP || '-'}</td>
+                    <td class="px-4 py-3">
+                        <div class="font-medium text-gray-800">${record.activity || '-'}</div>
+                        <div class="text-xs text-gray-400">${record.note || ''}</div>
+                    </td>
+                `;
+                historyList.appendChild(row);
+            });
+
+            // 2. 渲染图表
+            updateChart();
+        }
+
+        function updateChart() {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            // 只取最近10条数据方便展示
+            const recentRecords = records.slice(-15); 
+            
+            const labels = recentRecords.map(r => new Date(r.timestamp).toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}));
+            const anxietyData = recentRecords.map(r => r.anxiety);
+            const sysBPData = recentRecords.map(r => r.sysBP);
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '焦虑程度',
+                            data: anxietyData,
+                            borderColor: 'rgb(37, 99, 235)', // Blue
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: '高压(收缩压)',
+                            data: sysBPData,
+                            borderColor: 'rgb(220, 38, 38)', // Red
+                            borderWidth: 1,
+                            borderDash: [5, 5],
+                            pointRadius: 2,
+                            yAxisID: 'y1',
+                            hidden: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            min: 0,
+                            max: 10,
+                            title: { display: true, text: '焦虑指数' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            min: 60,
+                            max: 200,
+                            grid: { drawOnChartArea: false }, // 不画网格线，保持干净
+                            title: { display: true, text: '血压(mmHg)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 表单提交处理
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const newRecord = {
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
+                anxiety: parseInt(document.getElementById('anxietyLevel').value),
+                sysBP: document.getElementById('sysBP').value,
+                diaBP: document.getElementById('diaBP').value,
+                activity: document.getElementById('activity').value,
+                note: document.getElementById('note').value
+            };
+
+            records.push(newRecord);
+            localStorage.setItem('anxiety_records', JSON.stringify(records));
+            
+            form.reset();
+            // 重置滑块显示
+            document.getElementById('levelVal').innerText = '5';
+            document.getElementById('anxietyLevel').value = 5;
+            
+            render();
+        });
+
+        function clearData() {
+            if(confirm('确定要清空所有记录吗？此操作不可恢复。')) {
+                records = [];
+                localStorage.removeItem('anxiety_records');
+                render();
+            }
+        }
+
+        // 启动
+        render();
+    </script>
+</body>
+</html>
