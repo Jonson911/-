@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>焦虑缓解效能追踪器 v3.0</title>
+    <title>焦虑缓解效能追踪器 v3.1</title>
     
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -69,7 +69,7 @@
                 <i class="ph-fill ph-heartbeat text-sage-500 text-2xl"></i>
                 <div>
                     <h1 class="text-xl font-bold text-slate-700 tracking-tight leading-none">InnerCalm</h1>
-                    <span class="text-[10px] text-slate-400 tracking-wider">生理与情绪追踪 v3.0</span>
+                    <span class="text-[10px] text-slate-400 tracking-wider">生理与情绪追踪 v3.1</span>
                 </div>
             </div>
             <button onclick="clearAllData()" class="text-xs text-slate-400 hover:text-red-400 transition-colors">
@@ -146,24 +146,29 @@
                         <div class="bg-slate-50 p-4 rounded-xl space-y-4">
                             <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">生理指标 (选填)</div>
                             
-                            <!-- 心率 -->
-                            <div class="flex items-center justify-between gap-4">
-                                <label class="text-sm text-slate-600 min-w-[40px] flex items-center gap-1"><i class="ph ph-heartbeat text-red-500"></i> 心率</label>
-                                <div class="relative w-full">
-                                    <input type="number" id="hrBefore" placeholder="BPM" class="w-full p-2 pr-8 text-right rounded-lg border border-slate-200 text-sm focus:border-sage-400 outline-none bg-white">
-                                    <span class="absolute right-2 top-2 text-xs text-slate-400">次/分</span>
+                            <!-- 心率 - 布局修复 -->
+                            <div class="flex items-center gap-3">
+                                <label for="hrBefore" class="text-sm text-slate-600 flex items-center gap-1 shrink-0">
+                                    <i class="ph ph-heartbeat text-red-500"></i> 心率
+                                </label>
+                                <div class="relative flex-1">
+                                    <input type="number" id="hrBefore" placeholder="BPM" class="w-full p-2 pr-10 text-right rounded-lg border border-slate-200 text-sm focus:border-sage-400 outline-none bg-white">
+                                    <!-- 绝对定位并垂直居中 -->
+                                    <span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">次/分</span>
                                 </div>
                             </div>
 
-                            <!-- 血压 -->
-                            <div class="flex items-center justify-between gap-2">
-                                <label class="text-sm text-slate-600 min-w-[40px] flex items-center gap-1"><i class="ph ph-hand-tap text-blue-500"></i> 血压</label>
-                                <div class="flex gap-2 w-full">
+                            <!-- 血压 - 布局修复 -->
+                            <div class="flex items-center gap-3">
+                                <label for="bpSysBefore" class="text-sm text-slate-600 flex items-center gap-1 shrink-0">
+                                    <i class="ph ph-hand-tap text-blue-500"></i> 血压
+                                </label>
+                                <div class="flex gap-2 items-center flex-1">
                                     <input type="number" id="bpSysBefore" placeholder="收缩压" class="w-1/2 p-2 text-center rounded-lg border border-slate-200 text-sm focus:border-sage-400 outline-none bg-white">
-                                    <span class="text-slate-300 pt-1">/</span>
+                                    <span class="text-slate-300">/</span>
                                     <input type="number" id="bpDiaBefore" placeholder="舒张压" class="w-1/2 p-2 text-center rounded-lg border border-slate-200 text-sm focus:border-sage-400 outline-none bg-white">
                                 </div>
-                                <span class="text-slate-300 pt-1 text-xs">mmHg</span>
+                                <span class="text-slate-300 text-xs shrink-0">mmHg</span>
                             </div>
                         </div>
                     </div>
@@ -188,24 +193,29 @@
                         <div class="bg-sage-50/50 p-4 rounded-xl space-y-4 border border-sage-100">
                             <div class="text-xs font-bold text-sage-400 uppercase tracking-wider mb-1">生理指标 (选填)</div>
                             
-                            <!-- 心率 -->
-                            <div class="flex items-center justify-between gap-4">
-                                <label class="text-sm text-slate-600 min-w-[40px] flex items-center gap-1"><i class="ph ph-heartbeat text-red-500"></i> 心率</label>
-                                <div class="relative w-full">
-                                    <input type="number" id="hrAfter" placeholder="BPM" class="w-full p-2 pr-8 text-right rounded-lg border border-sage-200 text-sm focus:border-sage-400 focus:ring-1 focus:ring-sage-400 outline-none bg-white">
-                                    <span class="absolute right-2 top-2 text-xs text-slate-400">次/分</span>
+                            <!-- 心率 - 布局修复 -->
+                            <div class="flex items-center gap-3">
+                                <label for="hrAfter" class="text-sm text-slate-600 flex items-center gap-1 shrink-0">
+                                    <i class="ph ph-heartbeat text-red-500"></i> 心率
+                                </label>
+                                <div class="relative flex-1">
+                                    <input type="number" id="hrAfter" placeholder="BPM" class="w-full p-2 pr-10 text-right rounded-lg border border-sage-200 text-sm focus:border-sage-400 focus:ring-1 focus:ring-sage-400 outline-none bg-white">
+                                    <!-- 绝对定位并垂直居中 -->
+                                    <span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">次/分</span>
                                 </div>
                             </div>
 
-                            <!-- 血压 -->
-                            <div class="flex items-center justify-between gap-2">
-                                <label class="text-sm text-slate-600 min-w-[40px] flex items-center gap-1"><i class="ph ph-hand-tap text-blue-500"></i> 血压</label>
-                                <div class="flex gap-2 w-full">
+                            <!-- 血压 - 布局修复 -->
+                            <div class="flex items-center gap-3">
+                                <label for="bpSysAfter" class="text-sm text-slate-600 flex items-center gap-1 shrink-0">
+                                    <i class="ph ph-hand-tap text-blue-500"></i> 血压
+                                </label>
+                                <div class="flex gap-2 items-center flex-1">
                                     <input type="number" id="bpSysAfter" placeholder="收缩压" class="w-1/2 p-2 text-center rounded-lg border border-sage-200 text-sm focus:border-sage-400 focus:ring-1 focus:ring-sage-400 outline-none bg-white">
-                                    <span class="text-slate-300 pt-1">/</span>
+                                    <span class="text-slate-300">/</span>
                                     <input type="number" id="bpDiaAfter" placeholder="舒张压" class="w-1/2 p-2 text-center rounded-lg border border-sage-200 text-sm focus:border-sage-400 focus:ring-1 focus:ring-sage-400 outline-none bg-white">
                                 </div>
-                                <span class="text-slate-300 pt-1 text-xs">mmHg</span>
+                                <span class="text-slate-300 text-xs shrink-0">mmHg</span>
                             </div>
                         </div>
                     </div>
@@ -328,7 +338,7 @@
                 title: '正念冥想',
                 steps: [
                     '1. 找一个安静的地方坐下。',
-                    '2. 闭上眼睛，将注意力集中在呼吸上。',
+                    '2. 将注意力集中在呼吸上。',
                     '3. 当思绪飘走时，温柔地将其带回呼吸。',
                     '4. 持续 10-20 分钟，不带评判地观察当下的感受。'
                 ],
@@ -412,7 +422,7 @@
         };
 
         // --- 状态管理 ---
-        const STORAGE_KEY = 'anxiety_tracker_data_v3'; // 更新版本号
+        const STORAGE_KEY = 'anxiety_tracker_data_v3'; // 保持版本号，仅修复 UI
         let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         let chartInstance = null;
 
@@ -467,14 +477,21 @@
             instructionModal.classList.add('hidden');
         }
 
-        // --- 核心逻辑：数据存储与计算 (同 v2.0) ---
+        // --- 核心逻辑：数据存储与计算 ---
 
         document.getElementById('trackerForm').addEventListener('submit', (e) => {
             e.preventDefault();
 
             let method = methodSelect.value === 'other' ? (customMethodInput.value.trim() || '自定义方法') : methodSelect.value;
             if (!method || method === "--- 请选择放松方法 ---") {
-                 alert('请先选择或输入放松方法！');
+                 // 使用统一的错误提示方式
+                 const originalText = e.submitter.innerHTML;
+                 e.submitter.innerHTML = `<i class="ph-bold ph-warning text-red-400"></i> 请选择放松方法`;
+                 e.submitter.classList.add('bg-red-500');
+                 setTimeout(() => {
+                    e.submitter.innerHTML = originalText;
+                    e.submitter.classList.remove('bg-red-500');
+                 }, 3000);
                  return;
             }
 
@@ -527,7 +544,7 @@
             customMethodInput.classList.add('hidden');
         }
 
-        // --- UI 渲染逻辑 (同 v2.0) ---
+        // --- UI 渲染逻辑 ---
 
         function renderApp() {
             const hasData = entries.length > 0;
@@ -782,7 +799,6 @@
         }
 
         function clearAllData() {
-            // 使用 window.confirm() 代替自定义模态框，简化代码
             const confirmation = window.confirm('确定要清除所有历史记录吗？此操作无法撤销。');
             if(confirmation) {
                 localStorage.removeItem(STORAGE_KEY);
@@ -792,6 +808,8 @@
         }
 
         // 首次加载应用
+        const dateDisplay = document.getElementById('currentDate');
+        dateDisplay.textContent = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
         renderApp();
     </script>
 </body>
