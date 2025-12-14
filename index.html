@@ -2,815 +2,618 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>焦虑缓解效能追踪器 v3.1</title>
-    
-    <!-- 引入 Tailwind CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>魔法合成屋 ✨ Magic Merge</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- 引入 Phosphor Icons (用于图标) -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-
-    <!-- 配置 Tailwind 主题：使用柔和的鼠尾草绿/青色调 -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        sage: {
-                            50: '#f2fcf9',
-                            100: '#dff9f0',
-                            200: '#c0f0e0',
-                            300: '#92e2cc',
-                            400: '#5bcaba',
-                            500: '#38b0a0', // 主色
-                            600: '#2a8f83',
-                            700: '#25736b',
-                            800: '#215c56',
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-
+    <!-- 引入 Matter.js 物理引擎 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
-        /* 自定义滑块样式，使其看起来更柔和 */
-        input[type=range] { -webkit-appearance: none; background: transparent; }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
-            background: #38b0a0; cursor: pointer; margin-top: -8px; 
-            box-shadow: 0 2px 6px rgba(56, 176, 160, 0.4);
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #1a1c2c 0%, #4a192c 50%, #1a1c2c 100%);
+            overflow: hidden;
+            touch-action: none; /* 禁止移动端默认滚动 */
+            color: white;
         }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%; height: 4px; cursor: pointer; background: #e2e8f0; border-radius: 2px;
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 50px rgba(255, 105, 180, 0.3);
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
         }
-        /* 去除数字输入框的箭头 */
-        input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        /* 模态框背景，确保全屏覆盖 */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); z-index: 50;
-            display: flex; align-items: center; justify-content: center;
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1rem;
+        }
+
+        .score-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 1.5rem;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            display: inline-block;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        #next-item-display {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+
+        #game-over-screen.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .btn-restart {
+            margin-top: 20px;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 1.2rem;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+            transition: transform 0.2s;
+            pointer-events: auto;
+        }
+
+        .btn-restart:hover {
+            transform: scale(1.05);
+        }
+
+        .btn-sound {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            color: white;
+            cursor: pointer;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 简单的闪烁动画，用于提示线 */
+        @keyframes pulse {
+            0% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+            100% { opacity: 0.3; }
         }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-600 font-sans min-h-screen pb-10">
+<body class="h-screen w-screen flex items-center justify-center">
 
-    <!-- 顶部 Header -->
-    <header class="bg-white shadow-sm sticky top-0 z-10">
-        <div class="max-w-3xl mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <i class="ph-fill ph-heartbeat text-sage-500 text-2xl"></i>
-                <div>
-                    <h1 class="text-xl font-bold text-slate-700 tracking-tight leading-none">InnerCalm</h1>
-                    <span class="text-[10px] text-slate-400 tracking-wider">生理与情绪追踪 v3.1</span>
+    <!-- 游戏主容器 -->
+    <div id="game-container" class="w-full max-w-md h-[85vh] sm:h-[600px] sm:w-[400px]">
+        
+        <canvas id="world"></canvas>
+        
+        <!-- UI 层 -->
+        <div class="ui-overlay">
+            <div class="flex justify-between items-start w-full">
+                <div class="score-box">
+                    ✨ <span id="score">0</span>
+                </div>
+                <div id="next-item-display">
+                    <span id="next-emoji">✨</span>
                 </div>
             </div>
-            <button onclick="clearAllData()" class="text-xs text-slate-400 hover:text-red-400 transition-colors">
-                重置数据
+            
+            <button id="sound-btn" class="btn-sound">
+                🔊
             </button>
         </div>
-    </header>
 
-    <main class="max-w-3xl mx-auto px-4 py-8 space-y-8">
-
-        <!-- 1. 记录评估表单 -->
-        <section class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div class="bg-sage-50 px-6 py-3 border-b border-sage-100 flex items-center justify-between">
-                <span class="font-semibold text-sage-800 text-sm flex items-center gap-2">
-                    <i class="ph-bold ph-plus-circle"></i> 新的练习记录
-                </span>
-                <span class="text-xs text-sage-600" id="currentDate"></span>
+        <!-- 游戏结束屏幕 -->
+        <div id="game-over-screen">
+            <h1 class="text-4xl font-bold mb-2 text-pink-400">哎呀！</h1>
+            <p class="text-xl mb-4">溢出来了～</p>
+            <div class="text-2xl font-bold bg-white/10 px-6 py-2 rounded-lg">
+                最终得分: <span id="final-score">0</span>
             </div>
-            
-            <form id="trackerForm" class="p-6 space-y-8">
-                
-                <!-- 方法选择 -->
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-2">使用了什么放松方法？</label>
-                    <select id="methodSelect" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-sage-500 focus:ring-1 focus:ring-sage-500 outline-none transition-all text-slate-700 cursor-pointer">
-                        <option value="" disabled selected>--- 请选择放松方法 ---</option>
-                        <!-- 针对高血压/心率的精确方法 -->
-                        <optgroup label="🩺 生理调节类">
-                            <option value="HRV 同步呼吸法">✅ HRV 同步呼吸法 (推荐降压)</option>
-                            <option value="渐进式肌肉放松 (PMR)">💪 渐进式肌肉放松 (PMR)</option>
-                        </optgroup>
-                        <!-- 综合调节类 -->
-                        <optgroup label="🧠 心理调节类">
-                            <option value="正念冥想">🧘 正念冥想</option>
-                            <option value="引导式意象训练">🏞️ 引导式意象训练</option>
-                            <option value="自我放松训练">😴 自我放松训练</option>
-                            <option value="书写疗愈">✍️ 书写疗愈</option>
-                        </optgroup>
-                        <!-- 身体运动类 -->
-                        <optgroup label="🏃 身体运动类">
-                            <option value="太极/气功">☯️ 太极/气功</option>
-                            <option value="瑜伽">🤸 瑜伽 (舒缓式)</option>
-                            <option value="有氧运动">🏃 有氧运动 (轻度)</option>
-                        </optgroup>
-                        <option value="听音乐">🎧 听音乐</option>
-                        <option value="4-7-8 呼吸法">🌬️ 4-7-8 呼吸法 (快速镇静)</option>
-                        <option value="other">✨ 其他...</option>
-                    </select>
-                    <input type="text" id="customMethodInput" class="mt-2 w-full p-3 rounded-xl bg-white border border-slate-200 focus:border-sage-500 outline-none hidden" placeholder="请输入你的方法名称">
-                </div>
-
-                <!-- 对比区域：BEFORE vs AFTER -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
-                    <!-- 分隔线 (桌面端) -->
-                    <div class="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-slate-100 -ml-px"></div>
-
-                    <!-- Relax Before (放松前) -->
-                    <div class="space-y-6">
-                        <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
-                            <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span> 
-                            <h3 class="font-bold text-slate-700">放松前 (Before)</h3>
-                        </div>
-                        
-                        <!-- 焦虑度滑块 -->
-                        <div>
-                            <div class="flex justify-between mb-2">
-                                <label class="text-xs font-bold text-slate-500 uppercase">主观焦虑 (SUDs) 0-10</label>
-                                <span class="text-lg font-bold text-slate-600 leading-none" id="val-anxiety-before">5</span>
-                            </div>
-                            <input type="range" id="anxietyBefore" min="0" max="10" value="5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
-                        </div>
-
-                        <!-- 生理指标组 (心率, 血压) -->
-                        <div class="bg-slate-50 p-4 rounded-xl space-y-4">
-                            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">生理指标 (选填)</div>
-                            
-                            <!-- 心率 - 布局修复 -->
-                            <div class="flex items-center gap-3">
-                                <label for="hrBefore" class="text-sm text-slate-600 flex items-center gap-1 shrink-0">
-                                    <i class="ph ph-heartbeat text-red-500"></i> 心率
-                                </label>
-                                <div class="relative flex-1">
-                                    <input type="number" id="hrBefore" placeholder="BPM" class="w-full p-2 pr-10 text-right rounded-lg border border-slate-200 text-sm focus:border-sage-400 outline-none bg-white">
-                                    <!-- 绝对定位并垂直居中 -->
-                                    <span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">次/分</span>
-                                </div>
-                            </div>
-
-                            <!-- 血压 - 布局修复 -->
-                            <div class="flex items-center gap-3">
-                                <label for="bpSysBefore" class="text-sm text-slate-600 flex items-center gap-1 shrink-0">
-                                    <i class="ph ph-hand-tap text-blue-500"></i> 血压
-                                </label>
-                                <div class="flex gap-2 items-center flex-1">
-                                    <input type="number" id="bpSysBefore" placeholder="收缩压" class="w-1/2 p-2 text-center rounded-lg border border-slate-200 text-sm focus:border-sage-400 outline-none bg-white">
-                                    <span class="text-slate-300">/</span>
-                                    <input type="number" id="bpDiaBefore" placeholder="舒张压" class="w-1/2 p-2 text-center rounded-lg border border-slate-200 text-sm focus:border-sage-400 outline-none bg-white">
-                                </div>
-                                <span class="text-slate-300 text-xs shrink-0">mmHg</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Relax After (放松后) -->
-                    <div class="space-y-6">
-                        <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
-                            <span class="w-2.5 h-2.5 rounded-full bg-sage-500"></span> 
-                            <h3 class="font-bold text-sage-700">放松后 (After)</h3>
-                        </div>
-                        
-                        <!-- 焦虑度滑块 -->
-                        <div>
-                            <div class="flex justify-between mb-2">
-                                <label class="text-xs font-bold text-slate-500 uppercase">主观焦虑 (SUDs) 0-10</label>
-                                <span class="text-lg font-bold text-sage-600 leading-none" id="val-anxiety-after">3</span>
-                            </div>
-                            <input type="range" id="anxietyAfter" min="0" max="10" value="3" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-sage-500">
-                        </div>
-
-                        <!-- 生理指标组 (心率, 血压) -->
-                        <div class="bg-sage-50/50 p-4 rounded-xl space-y-4 border border-sage-100">
-                            <div class="text-xs font-bold text-sage-400 uppercase tracking-wider mb-1">生理指标 (选填)</div>
-                            
-                            <!-- 心率 - 布局修复 -->
-                            <div class="flex items-center gap-3">
-                                <label for="hrAfter" class="text-sm text-slate-600 flex items-center gap-1 shrink-0">
-                                    <i class="ph ph-heartbeat text-red-500"></i> 心率
-                                </label>
-                                <div class="relative flex-1">
-                                    <input type="number" id="hrAfter" placeholder="BPM" class="w-full p-2 pr-10 text-right rounded-lg border border-sage-200 text-sm focus:border-sage-400 focus:ring-1 focus:ring-sage-400 outline-none bg-white">
-                                    <!-- 绝对定位并垂直居中 -->
-                                    <span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">次/分</span>
-                                </div>
-                            </div>
-
-                            <!-- 血压 - 布局修复 -->
-                            <div class="flex items-center gap-3">
-                                <label for="bpSysAfter" class="text-sm text-slate-600 flex items-center gap-1 shrink-0">
-                                    <i class="ph ph-hand-tap text-blue-500"></i> 血压
-                                </label>
-                                <div class="flex gap-2 items-center flex-1">
-                                    <input type="number" id="bpSysAfter" placeholder="收缩压" class="w-1/2 p-2 text-center rounded-lg border border-sage-200 text-sm focus:border-sage-400 focus:ring-1 focus:ring-sage-400 outline-none bg-white">
-                                    <span class="text-slate-300">/</span>
-                                    <input type="number" id="bpDiaAfter" placeholder="舒张压" class="w-1/2 p-2 text-center rounded-lg border border-sage-200 text-sm focus:border-sage-400 focus:ring-1 focus:ring-sage-400 outline-none bg-white">
-                                </div>
-                                <span class="text-slate-300 text-xs shrink-0">mmHg</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 备注 (选填) -->
-                <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-1">备注 / 感受 (可选)</label>
-                    <textarea id="notes" rows="2" class="w-full p-3 rounded-xl bg-slate-50 border-none text-sm focus:ring-1 focus:ring-sage-300 resize-none placeholder-slate-400" placeholder="记录下此刻的想法，或者身体的具体感受..."></textarea>
-                </div>
-
-                <!-- 提交按钮 -->
-                <button type="submit" class="w-full bg-sage-500 hover:bg-sage-600 text-white font-bold py-4 rounded-xl transition-all transform active:scale-[0.99] shadow-lg shadow-sage-200 flex justify-center items-center gap-2 text-base">
-                    <i class="ph-bold ph-check-circle text-xl"></i>
-                    记录并分析
-                </button>
-            </form>
-        </section>
-
-        <!-- 2. 智能分析仪表盘 -->
-        <section id="dashboardSection" class="space-y-8 hidden">
-            
-            <!-- 效能排行榜 -->
-            <div>
-                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <i class="ph-fill ph-trophy text-yellow-400"></i> 最佳减压方法 Top 3
-                </h3>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="leaderboardContainer">
-                    <!-- JS 动态插入排行榜卡片 -->
-                </div>
-            </div>
-
-            <!-- 趋势图表 -->
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-                <div class="flex justify-between items-center mb-6">
-                    <div>
-                        <h3 class="font-bold text-slate-700">焦虑程度变化趋势 (SUDs)</h3>
-                        <p class="text-xs text-slate-400">越低代表越平静</p>
-                    </div>
-                    <div class="flex gap-4 text-xs font-medium">
-                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>放松前</span>
-                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sage-500"></span>放松后</span>
-                    </div>
-                </div>
-                <div class="h-64 w-full">
-                    <canvas id="trendChart"></canvas>
-                </div>
-            </div>
-        </section>
-
-        <!-- 3. 详细历史记录 -->
-        <section id="historySection" class="hidden">
-            <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <i class="ph-fill ph-clock-counter-clockwise text-slate-400"></i> 详细记录
-            </h3>
-            <div id="historyList" class="space-y-4">
-                <!-- JS 动态插入历史记录卡片 -->
-            </div>
-        </section>
-
-        <!-- 空状态提示 -->
-        <div id="emptyState" class="text-center py-16 opacity-60">
-            <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="ph-duotone ph-notebook text-3xl text-slate-400"></i>
-            </div>
-            <p class="text-slate-500 font-medium">暂无数据</p>
-            <p class="text-xs text-slate-400 mt-1">完成第一次练习来查看分析</p>
-        </div>
-
-    </main>
-
-    <!-- 方法指导模态框 (Modal) -->
-    <div id="instructionModal" class="modal-overlay hidden">
-        <div class="bg-white rounded-2xl shadow-2xl p-6 w-11/12 max-w-lg transform transition-all duration-300">
-            <h3 id="modalTitle" class="text-2xl font-bold text-sage-600 mb-4 flex items-center gap-2 border-b pb-2 border-slate-100">
-                <!-- Title is inserted here -->
-            </h3>
-            
-            <div class="max-h-[70vh] overflow-y-auto pr-2">
-                <div class="space-y-4" id="modalSteps">
-                    <!-- Steps are inserted here -->
-                </div>
-                <div class="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                    <p class="text-sm font-semibold text-slate-700 mb-1">原理提示：</p>
-                    <p id="modalTip" class="text-xs text-slate-500"></p>
-                </div>
-            </div>
-
-            <button onclick="hideInstructions()" class="mt-6 w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-3 rounded-xl transition-colors">
-                我已了解，开始练习
-            </button>
+            <button class="btn-restart" onclick="resetGame()">再试一次 🌸</button>
         </div>
     </div>
 
     <script>
-        // --- 核心数据：方法指导 ---
-        const MethodInstructions = {
-            '4-7-8 呼吸法': {
-                title: '4-7-8 呼吸法',
-                steps: [
-                    '1. 完全呼气，将肺部的空气排空。',
-                    '2. 闭嘴，用鼻子吸气，默数 4 秒。',
-                    '3. 屏住呼吸，默数 7 秒。',
-                    '4. 张开嘴巴，发出“呼”声，呼气 8 秒。',
-                    '5. 重复 3-4 次。'
-                ],
-                tip: '此法能快速激活副交感神经，帮助降压和减缓心率。'
+        // --- 游戏配置 ---
+        // 定义不同等级的物品：半径、Emoji、分数
+        const TIERS = [
+            { radius: 15, emoji: '✨', score: 2, color: '#FFD700' },    // 0: 星星 (最小)
+            { radius: 22, emoji: '🍬', score: 4, color: '#FF69B4' },    // 1: 糖果
+            { radius: 30, emoji: '🌸', score: 8, color: '#FFB7C5' },    // 2: 樱花
+            { radius: 38, emoji: '🍄', score: 16, color: '#FF4500' },   // 3: 蘑菇
+            { radius: 48, emoji: '🔮', score: 32, color: '#9370DB' },   // 4: 水晶球
+            { radius: 60, emoji: '💎', score: 64, color: '#00BFFF' },   // 5: 宝石
+            { radius: 72, emoji: '🦄', score: 128, color: '#E6E6FA' },  // 6: 独角兽
+            { radius: 85, emoji: '🌙', score: 256, color: '#FFFFE0' },  // 7: 月亮
+            { radius: 100, emoji: '🌞', score: 512, color: '#FFA500' }, // 8: 太阳
+            { radius: 120, emoji: '👑', score: 1024, color: '#FFD700' } // 9: 皇冠 (最大)
+        ];
+
+        // --- 物理引擎设置 ---
+        const Engine = Matter.Engine,
+              Render = Matter.Render,
+              Runner = Matter.Runner,
+              Bodies = Matter.Bodies,
+              Composite = Matter.Composite,
+              Events = Matter.Events,
+              World = Matter.World,
+              Body = Matter.Body;
+
+        let engine;
+        let render;
+        let runner;
+        let canvas;
+        let ctx;
+        let width, height;
+        
+        // 游戏状态
+        let currentItem = null;
+        let nextTier = 0;
+        let score = 0;
+        let isGameOver = false;
+        let canDrop = true;
+        let particles = [];
+        let soundEnabled = true;
+        const WALL_THICKNESS = 50;
+        const DANGER_LINE_Y = 100; // 危险线高度
+
+        // --- 音效合成器 (Web Audio API) ---
+        // 这样就不需要加载外部文件，保证声音立刻能用
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playTone(freq, type, duration) {
+            if (!soundEnabled || audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            if (!soundEnabled) return;
+
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        const sounds = {
+            drop: () => playTone(300, 'triangle', 0.1),
+            merge: () => {
+                // 播放一段好听的和弦
+                playTone(440, 'sine', 0.3); // A4
+                setTimeout(() => playTone(554, 'sine', 0.3), 50); // C#5
+                setTimeout(() => playTone(659, 'sine', 0.3), 100); // E5
             },
-            '渐进式肌肉放松 (PMR)': {
-                title: '渐进式肌肉放松 (PMR)',
-                steps: [
-                    '1. 找到舒适的姿势，从脚尖或手部开始。',
-                    '2. 紧绷一组肌肉（如右拳），持续 5-10 秒。',
-                    '3. 快速放松，感受紧绷与松弛之间的巨大差异，持续 20 秒。',
-                    '4. 依次放松全身所有肌肉群。'
-                ],
-                tip: '通过有意识的收紧再放松，消除肌肉深层紧张，有效缓解躯体化焦虑。'
-            },
-            '正念冥想': {
-                title: '正念冥想',
-                steps: [
-                    '1. 找一个安静的地方坐下。',
-                    '2. 将注意力集中在呼吸上。',
-                    '3. 当思绪飘走时，温柔地将其带回呼吸。',
-                    '4. 持续 10-20 分钟，不带评判地观察当下的感受。'
-                ],
-                tip: '培养对当下状态的觉知，减少对未来不确定性的担忧。'
-            },
-            '瑜伽': {
-                title: '瑜伽 (舒缓式)',
-                steps: [
-                    '1. 选择几个温和的体式（如猫牛式、婴儿式、仰卧扭转）。',
-                    '2. 每个体式停留 1-3 分钟。',
-                    '3. 配合深长均匀的呼吸，重点放在拉伸和放松。'
-                ],
-                tip: '运动与呼吸结合，可以帮助调节血压和改善血液循环。'
-            },
-            '有氧运动': {
-                title: '有氧运动 (轻度)',
-                steps: [
-                    '1. 选择低强度、持续性的运动，如快走、慢跑或骑自行车。',
-                    '2. 保持心率在最大心率的 50%-70%。',
-                    '3. 持续 20-30 分钟。'
-                ],
-                tip: '规律的有氧运动是改善慢性焦虑和高血压的长期有效手段。'
-            },
-            '书写疗愈': {
-                title: '书写疗愈',
-                steps: [
-                    '1. 找一个笔记本和笔，给自己 15 分钟不受打扰的时间。',
-                    '2. 写下你所有焦虑、恐惧或烦恼，不要评判，只管倾泻。',
-                    '3. 完成后，可以选择撕毁或锁起来。'
-                ],
-                tip: '将内在情绪外化，帮助理清思绪，减少内在压力对身体的侵蚀。'
-            },
-            '听音乐': {
-                title: '听音乐 (放松)',
-                steps: [
-                    '1. 选择节奏缓慢（低于 60 BPM）、没有歌词的纯音乐（如古典乐、自然音景）。',
-                    '2. 调低音量，以舒适为主。',
-                    '3. 闭上眼睛，专注听觉感受。'
-                ],
-                tip: '特定的音乐频率已被证明能有效诱导 Alpha 波，帮助身体进入放松状态。'
-            },
-            'HRV 同步呼吸法': {
-                title: 'HRV 同步呼吸法',
-                steps: [
-                    '1. 找一个舒适的坐姿，将手放在腹部。',
-                    '2. 尝试用鼻子进行腹式呼吸。',
-                    '3. 关键：吸气 5 秒，呼气 5 秒。使每分钟呼吸次数稳定在 6 次。',
-                    '4. 持续 10-20 分钟，保持节奏的稳定性和平滑度。'
-                ],
-                tip: '这是提高心率变异性(HRV)最有效的方法之一，直接调节自主神经系统，对焦虑性高血压有显著的辅助作用。'
-            },
-            '引导式意象训练': {
-                title: '引导式意象训练',
-                steps: [
-                    '1. 播放一段引导式意象的音频，或自己想象。',
-                    '2. 闭上眼睛，想象自己身处一个最安全、最平静的环境（如温暖的沙滩或宁静的森林）。',
-                    '3. 专注于细节：感受阳光的温度、听到海浪的声音、闻到泥土的芬芳。'
-                ],
-                tip: '通过想象力切断焦虑回路，让大脑产生放松激素，间接帮助血管放松。'
-            },
-            '自我放松训练': {
-                title: '自我放松训练 (Autogenic Training)',
-                steps: [
-                    '1. 躺下或坐下，保持放松。',
-                    '2. 默念：“我的右臂非常沉重。”并集中精神感受。',
-                    '3. 默念：“我的双腿非常温暖。”感受血液流淌。',
-                    '4. 依次完成身体各部位的沉重感和温暖感。最后默念：“我完全平静。”'
-                ],
-                tip: '一种自我催眠技术，通过想象身体的感觉来诱导深度放松，对治疗失眠和降压非常有效。'
-            },
-            '太极/气功': {
-                title: '太极/气功 (慢动作)',
-                steps: [
-                    '1. 站立或坐在一个舒适的位置。',
-                    '2. 练习缓慢、圆润、连续的动作（如起势、云手）。',
-                    '3. 将呼吸与动作完全同步，动作慢时呼吸深长。',
-                    '4. 持续 15-30 分钟，注重身体的平衡与协调。'
-                ],
-                tip: '低冲击运动能稳定心率，结合腹式呼吸，有助于长期稳定血压。'
+            pop: () => playTone(800, 'sine', 0.1),
+            gameOver: () => {
+                playTone(200, 'sawtooth', 0.5);
+                setTimeout(() => playTone(150, 'sawtooth', 0.5), 200);
             }
         };
 
-        // --- 状态管理 ---
-        const STORAGE_KEY = 'anxiety_tracker_data_v3'; // 保持版本号，仅修复 UI
-        let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-        let chartInstance = null;
+        // --- 初始化游戏 ---
+        function init() {
+            const container = document.getElementById('game-container');
+            canvas = document.getElementById('world');
+            width = container.clientWidth;
+            height = container.clientHeight;
 
-        // --- UI 事件绑定 ---
-        const methodSelect = document.getElementById('methodSelect');
-        const customMethodInput = document.getElementById('customMethodInput');
-        const instructionModal = document.getElementById('instructionModal');
+            // 设置 Canvas 分辨率 (Retina 屏优化)
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
 
-        // 绑定滑块数值显示
-        ['anxietyBefore', 'anxietyAfter'].forEach(id => {
-            const el = document.getElementById(id);
-            const display = document.getElementById(`val-${id.replace(/[A-Z]/g, l => '-' + l.toLowerCase())}`);
-            el.addEventListener('input', (e) => {
-                display.textContent = e.target.value;
-                if(id === 'anxietyAfter') {
-                    display.className = e.target.value < 4 
-                        ? "text-lg font-bold text-sage-600 leading-none" 
-                        : "text-lg font-bold text-yellow-600 leading-none";
+            // 创建引擎
+            engine = Engine.create();
+            // 修改重力，让手感更像“气球”或“果冻”
+            engine.world.gravity.y = 1.2; 
+
+            // 创建墙壁
+            const ground = Bodies.rectangle(width/2, height + WALL_THICKNESS/2, width, WALL_THICKNESS, { isStatic: true, render: { visible: false } });
+            const leftWall = Bodies.rectangle(0 - WALL_THICKNESS/2, height/2, WALL_THICKNESS, height * 2, { isStatic: true, render: { visible: false } });
+            const rightWall = Bodies.rectangle(width + WALL_THICKNESS/2, height/2, WALL_THICKNESS, height * 2, { isStatic: true, render: { visible: false } });
+
+            World.add(engine.world, [ground, leftWall, rightWall]);
+
+            // 启动 Runner
+            runner = Runner.create();
+            Runner.run(runner, engine);
+
+            // 碰撞检测监听
+            Events.on(engine, 'collisionStart', handleCollisions);
+
+            // 输入监听
+            setupInputs(container);
+
+            // 自定义渲染循环
+            requestAnimationFrame(renderLoop);
+
+            // 生成第一个预备物品
+            prepareNextItem();
+            updateScore(0);
+        }
+
+        // --- 游戏逻辑 ---
+
+        function prepareNextItem() {
+            // 随机生成 0 到 3 级的物品
+            nextTier = Math.floor(Math.random() * 4);
+            // 更新 UI 预览
+            document.getElementById('next-emoji').innerText = TIERS[nextTier].emoji;
+        }
+
+        function spawnCurrentItem(x) {
+            if (!canDrop || isGameOver) return;
+            
+            canDrop = false; // 冷却防止连点
+            sounds.drop();
+
+            // 限制 X 坐标，防止生成在墙里
+            const radius = TIERS[nextTier].radius;
+            x = Math.max(radius + 5, Math.min(width - radius - 5, x));
+
+            const body = Bodies.circle(x, 50, radius, {
+                restitution: 0.3, // 弹性
+                friction: 0.1,
+                label: `item-${nextTier}`, // 标记等级
+                render: {
+                    fillStyle: TIERS[nextTier].color
                 }
             });
-        });
-
-        // 方法选择联动 (显示输入框 和 弹出指导)
-        methodSelect.addEventListener('change', (e) => {
-            const selectedMethod = e.target.value;
-            customMethodInput.classList.toggle('hidden', selectedMethod !== 'other');
             
-            if (selectedMethod === 'other') {
-                customMethodInput.focus();
-            } else if (MethodInstructions[selectedMethod]) {
-                showInstructions(selectedMethod);
-            }
-        });
+            // 存储自定义属性
+            body.tier = nextTier;
+            body.emoji = TIERS[nextTier].emoji;
 
-        // 模态框逻辑
-        function showInstructions(methodName) {
-            const instruction = MethodInstructions[methodName];
-            if (!instruction) return;
+            World.add(engine.world, body);
 
-            document.getElementById('modalTitle').textContent = instruction.title + ' - 步骤指导';
-            document.getElementById('modalTip').textContent = instruction.tip;
-            
-            const stepsHtml = instruction.steps.map((step, index) => 
-                `<p class="text-sm text-slate-700 leading-relaxed"><span class="font-bold text-sage-500 mr-2">${index + 1}.</span> ${step.replace(/^\d+\.\s*/, '')}</p>`
-            ).join('');
-            
-            document.getElementById('modalSteps').innerHTML = stepsHtml;
-            instructionModal.classList.remove('hidden');
-        }
-
-        function hideInstructions() {
-            instructionModal.classList.add('hidden');
-        }
-
-        // --- 核心逻辑：数据存储与计算 ---
-
-        document.getElementById('trackerForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-
-            let method = methodSelect.value === 'other' ? (customMethodInput.value.trim() || '自定义方法') : methodSelect.value;
-            if (!method || method === "--- 请选择放松方法 ---") {
-                 // 使用统一的错误提示方式
-                 const originalText = e.submitter.innerHTML;
-                 e.submitter.innerHTML = `<i class="ph-bold ph-warning text-red-400"></i> 请选择放松方法`;
-                 e.submitter.classList.add('bg-red-500');
-                 setTimeout(() => {
-                    e.submitter.innerHTML = originalText;
-                    e.submitter.classList.remove('bg-red-500');
-                 }, 3000);
-                 return;
-            }
-
-            const parseNum = (id) => {
-                const val = document.getElementById(id).value;
-                return val ? parseInt(val) : null;
-            };
-
-            const newEntry = {
-                id: Date.now(),
-                timestamp: new Date().toISOString(),
-                method: method,
-                sudsBefore: parseNum('anxietyBefore') || 0,
-                sudsAfter: parseNum('anxietyAfter') || 0,
-                hrBefore: parseNum('hrBefore'),
-                hrAfter: parseNum('hrAfter'),
-                bpSysBefore: parseNum('bpSysBefore'),
-                bpDiaBefore: parseNum('bpDiaBefore'),
-                bpSysAfter: parseNum('bpSysAfter'),
-                bpDiaAfter: parseNum('bpDiaAfter'),
-                notes: document.getElementById('notes').value.trim()
-            };
-
-            newEntry.sudsDrop = newEntry.sudsBefore - newEntry.sudsAfter;
-
-            entries.unshift(newEntry);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-
-            resetForm();
-            renderApp();
-            
-            // 简单反馈
-            const btn = e.submitter;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = `<i class="ph-bold ph-check"></i> 已保存`;
-            btn.classList.add('bg-green-600');
+            // 冷却时间
             setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.classList.remove('bg-green-600');
-            }, 2000);
+                canDrop = true;
+            }, 600);
+
+            prepareNextItem();
+        }
+
+        function handleCollisions(event) {
+            const pairs = event.pairs;
+
+            for (let i = 0; i < pairs.length; i++) {
+                const bodyA = pairs[i].bodyA;
+                const bodyB = pairs[i].bodyB;
+
+                // 检查是否都是游戏物品且等级相同
+                if (bodyA.tier !== undefined && bodyB.tier !== undefined && bodyA.tier === bodyB.tier) {
+                    // 防止同一帧多次处理
+                    if(bodyA.isRemoved || bodyB.isRemoved) continue;
+
+                    const newTier = bodyA.tier + 1;
+                    
+                    // 如果已经是最高级，就不再合成了（或者你可以设定消除）
+                    if (newTier >= TIERS.length) {
+                         // 这里可以是消除并加巨分
+                         createParticles(bodyA.position.x, bodyA.position.y, TIERS[bodyA.tier].color, 20);
+                         World.remove(engine.world, [bodyA, bodyB]);
+                         bodyA.isRemoved = true; 
+                         bodyB.isRemoved = true;
+                         updateScore(score + TIERS[bodyA.tier].score * 2);
+                         sounds.merge();
+                         continue;
+                    }
+
+                    // 计算新位置（中点）
+                    const midX = (bodyA.position.x + bodyB.position.x) / 2;
+                    const midY = (bodyA.position.y + bodyB.position.y) / 2;
+
+                    // 移除旧物体
+                    World.remove(engine.world, [bodyA, bodyB]);
+                    bodyA.isRemoved = true; // 标记删除防止重复计算
+                    bodyB.isRemoved = true;
+
+                    // 创建新物体
+                    const newRadius = TIERS[newTier].radius;
+                    const newBody = Bodies.circle(midX, midY, newRadius, {
+                        restitution: 0.2,
+                        label: `item-${newTier}`
+                    });
+                    newBody.tier = newTier;
+                    newBody.emoji = TIERS[newTier].emoji;
+
+                    World.add(engine.world, newBody);
+
+                    // 特效与分数
+                    createParticles(midX, midY, TIERS[newTier].color, 10);
+                    updateScore(score + TIERS[newTier].score);
+                    sounds.merge();
+                }
+            }
+        }
+
+        // --- 输入处理 ---
+        function setupInputs(element) {
+            let currentX = width / 2;
+
+            const handleMove = (e) => {
+                if(isGameOver) return;
+                const rect = element.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                currentX = clientX - rect.left;
+            };
+
+            const handleEnd = (e) => {
+                if(isGameOver) return;
+                spawnCurrentItem(currentX);
+            };
+
+            element.addEventListener('mousemove', handleMove);
+            element.addEventListener('touchmove', handleMove, {passive: false}); // passive false 允许 preventDefault
+
+            element.addEventListener('mouseup', handleEnd);
+            element.addEventListener('touchend', handleEnd);
+            
+            // 记录鼠标/手指位置给渲染循环用，用来画辅助线
+            element.currentInputX = () => currentX;
+        }
+
+        // --- 视觉效果 ---
+        
+        function createParticles(x, y, color, count) {
+            for(let i=0; i<count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1.0,
+                    color: color,
+                    size: Math.random() * 4 + 2
+                });
+            }
+        }
+
+        function updateScore(newScore) {
+            score = newScore;
+            document.getElementById('score').innerText = score;
+        }
+
+        function checkGameOver() {
+            const bodies = Composite.allBodies(engine.world);
+            for (let i = 0; i < bodies.length; i++) {
+                const body = bodies[i];
+                if (!body.isStatic && body.position.y < DANGER_LINE_Y && body.velocity.y > -0.1 && body.velocity.y < 0.1) {
+                    // 如果物体静止在危险线以上，游戏结束
+                    // 加上一点延迟判定，防止刚生成时误判
+                    if(body.lifeTime && Date.now() - body.lifeTime > 1000) {
+                         // 真正的游戏结束逻辑
+                         isGameOver = true;
+                         document.getElementById('game-over-screen').classList.add('active');
+                         document.getElementById('final-score').innerText = score;
+                         sounds.gameOver();
+                         return;
+                    }
+                    if(!body.lifeTime) body.lifeTime = Date.now();
+                }
+            }
+        }
+
+        // --- 渲染循环 (核心) ---
+        function renderLoop() {
+            // 1. 清空画布
+            ctx.clearRect(0, 0, width, height);
+
+            // 2. 绘制危险线
+            ctx.beginPath();
+            ctx.moveTo(0, DANGER_LINE_Y);
+            ctx.lineTo(width, DANGER_LINE_Y);
+            ctx.strokeStyle = "rgba(255, 100, 100, 0.3)";
+            ctx.setLineDash([10, 10]);
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 3. 绘制辅助线和预备物品 (如果未结束)
+            if (!isGameOver) {
+                const inputX = document.getElementById('game-container').currentInputX ? document.getElementById('game-container').currentInputX() : width/2;
+                // 限制辅助线范围
+                const clampX = Math.max(TIERS[nextTier].radius, Math.min(width - TIERS[nextTier].radius, inputX));
+                
+                // 虚线
+                ctx.beginPath();
+                ctx.moveTo(clampX, 50);
+                ctx.lineTo(clampX, height);
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // 悬停的物品
+                if(canDrop) {
+                    ctx.globalAlpha = 0.8;
+                    const r = TIERS[nextTier].radius;
+                    ctx.fillStyle = TIERS[nextTier].color;
+                    ctx.beginPath();
+                    ctx.arc(clampX, 50, r, 0, Math.PI*2);
+                    ctx.fill();
+                    
+                    ctx.font = `${r}px Fredoka`;
+                    ctx.fillStyle = "#FFF";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(TIERS[nextTier].emoji, clampX, 50 + r * 0.1);
+                    ctx.globalAlpha = 1.0;
+                }
+            }
+
+            // 4. 绘制物理世界的物体
+            const bodies = Composite.allBodies(engine.world);
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            for (let i = 0; i < bodies.length; i += 1) {
+                const body = bodies[i];
+                if (body.isStatic) continue; // 不画墙壁
+
+                const r = body.circleRadius;
+                
+                ctx.translate(body.position.x, body.position.y);
+                ctx.rotate(body.angle);
+
+                // 画圆球背景
+                ctx.beginPath();
+                ctx.arc(0, 0, r, 0, 2 * Math.PI);
+                ctx.fillStyle = TIERS[body.tier].color;
+                ctx.shadowColor = TIERS[body.tier].color;
+                ctx.shadowBlur = 10;
+                ctx.fill();
+                ctx.shadowBlur = 0; // 重置阴影
+
+                // 高光效果 (让球看起来立体)
+                ctx.beginPath();
+                ctx.arc(-r*0.3, -r*0.3, r*0.2, 0, 2*Math.PI);
+                ctx.fillStyle = "rgba(255,255,255,0.3)";
+                ctx.fill();
+
+                // 画 Emoji
+                ctx.font = `${r * 1.2}px serif`; // Emoji 字体大小
+                // 修正 Emoji 垂直居中偏移
+                ctx.fillText(body.emoji, 0, r * 0.1); 
+
+                ctx.rotate(-body.angle);
+                ctx.translate(-body.position.x, -body.position.y);
+            }
+
+            // 5. 绘制粒子特效
+            for(let i=particles.length-1; i>=0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.02;
+                p.vy += 0.5; // 重力
+
+                if(p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+
+            // 6. 检查游戏结束
+            if(!isGameOver) checkGameOver();
+
+            requestAnimationFrame(renderLoop);
+        }
+
+        // --- 全局控制 ---
+        function resetGame() {
+            World.clear(engine.world);
+            Engine.clear(engine);
+            
+            // 重建墙壁
+            const ground = Bodies.rectangle(width/2, height + WALL_THICKNESS/2, width, WALL_THICKNESS, { isStatic: true });
+            const leftWall = Bodies.rectangle(0 - WALL_THICKNESS/2, height/2, WALL_THICKNESS, height * 2, { isStatic: true });
+            const rightWall = Bodies.rectangle(width + WALL_THICKNESS/2, height/2, WALL_THICKNESS, height * 2, { isStatic: true });
+            World.add(engine.world, [ground, leftWall, rightWall]);
+            
+            score = 0;
+            isGameOver = false;
+            canDrop = true;
+            particles = [];
+            updateScore(0);
+            document.getElementById('game-over-screen').classList.remove('active');
+            prepareNextItem();
+        }
+
+        // 声音开关
+        document.getElementById('sound-btn').addEventListener('click', (e) => {
+            soundEnabled = !soundEnabled;
+            e.target.innerText = soundEnabled ? '🔊' : '🔇';
+            e.stopPropagation(); // 防止触发掉落
         });
 
-        function resetForm() {
-            document.getElementById('trackerForm').reset();
-            document.getElementById('anxietyBefore').value = '5';
-            document.getElementById('anxietyAfter').value = '3';
-            document.getElementById('val-anxiety-before').textContent = '5';
-            document.getElementById('val-anxiety-after').textContent = '3';
-            methodSelect.value = "--- 请选择放松方法 ---";
-            customMethodInput.classList.add('hidden');
-        }
+        // 窗口大小改变时重置 Canvas 尺寸 (为了简单，直接刷新页面更安全，但这里做个简单适配)
+        window.addEventListener('resize', () => {
+             // 简单重载页面以适配新尺寸
+             // location.reload(); 
+        });
 
-        // --- UI 渲染逻辑 ---
+        // 启动
+        window.onload = init;
 
-        function renderApp() {
-            const hasData = entries.length > 0;
-            document.getElementById('emptyState').classList.toggle('hidden', hasData);
-            document.getElementById('dashboardSection').classList.toggle('hidden', !hasData);
-            document.getElementById('historySection').classList.toggle('hidden', !hasData);
-
-            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
-
-            if (hasData) {
-                renderHistory();
-                renderStats();
-                renderChart();
-            }
-        }
-
-        function renderHistory() {
-            const container = document.getElementById('historyList');
-            container.innerHTML = '';
-
-            entries.slice(0, 20).forEach(entry => {
-                const date = new Date(entry.timestamp);
-                const timeStr = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-                const dateStr = date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
-
-                let physioHtml = '';
-                
-                if (entry.hrBefore && entry.hrAfter) {
-                    const diff = entry.hrBefore - entry.hrAfter;
-                    const colorClass = diff > 0 ? 'text-sage-600' : (diff < 0 ? 'text-red-400' : 'text-slate-400');
-                    physioHtml += `
-                        <div class="flex justify-between items-center text-xs mt-1">
-                            <span class="text-slate-400 w-12">心率</span>
-                            <span class="font-mono text-slate-600">${entry.hrBefore}→${entry.hrAfter}</span>
-                            <span class="${colorClass} w-8 text-right font-medium">${diff > 0 ? '↓'+diff : (diff < 0 ? '↑'+Math.abs(diff) : '-')}</span>
-                        </div>`;
-                }
-
-                if (entry.bpSysBefore && entry.bpSysAfter) {
-                    const sysDiff = entry.bpSysBefore - entry.bpSysAfter;
-                    const colorClass = sysDiff > 0 ? 'text-sage-600' : 'text-slate-400';
-                    
-                    physioHtml += `
-                        <div class="flex justify-between items-center text-xs mt-1">
-                            <span class="text-slate-400 w-12">血压</span>
-                            <span class="font-mono text-slate-600 tracking-tighter">
-                                ${entry.bpSysBefore}/${entry.bpDiaBefore}→${entry.bpSysAfter}/${entry.bpDiaAfter}
-                            </span>
-                            <span class="${colorClass} w-8 text-right font-medium">${sysDiff > 0 ? '↓' : ''}</span>
-                        </div>`;
-                }
-
-                if (!physioHtml) physioHtml = '<div class="text-xs text-slate-300 italic mt-1">未记录生理指标</div>';
-
-                const sudsDropBadge = entry.sudsDrop > 0 
-                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sage-100 text-sage-700">下降 ${entry.sudsDrop} 点</span>`
-                    : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500">持平/略升</span>`;
-
-
-                const html = `
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-all">
-                        <div class="flex flex-col md:flex-row gap-4">
-                            <div class="flex items-center md:items-start gap-3 md:w-1/3 shrink-0">
-                                <div class="w-10 h-10 rounded-full bg-sage-50 flex items-center justify-center text-xl shrink-0">
-                                    ${getMethodIcon(entry.method)}
-                                </div>
-                                <div>
-                                    <h4 class="font-bold text-slate-700 text-sm leading-tight mb-0.5">${entry.method}</h4>
-                                    <p class="text-xs text-slate-400">${dateStr} ${timeStr}</p>
-                                    ${entry.notes ? `<p class="text-xs text-slate-500 mt-1 bg-slate-50 p-1.5 rounded line-clamp-2">${entry.notes}</p>` : ''}
-                                </div>
-                            </div>
-
-                            <div class="flex-1 border-t md:border-t-0 md:border-l border-slate-100 pt-3 md:pt-0 md:pl-4 flex flex-col justify-center">
-                                <div class="flex justify-between items-center mb-2">
-                                    <span class="text-xs font-bold text-slate-400 uppercase">焦虑度 (SUDs)</span>
-                                    ${sudsDropBadge}
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden flex">
-                                        <div class="bg-slate-300 h-full" style="width: ${entry.sudsBefore * 10}%"></div>
-                                    </div>
-                                    <i class="ph-bold ph-arrow-right text-slate-300 text-xs"></i>
-                                    <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden flex">
-                                        <div class="bg-sage-500 h-full" style="width: ${entry.sudsAfter * 10}%"></div>
-                                    </div>
-                                </div>
-                                <div class="flex justify-between text-xs text-slate-500 mt-1 font-mono">
-                                    <span>${entry.sudsBefore}</span>
-                                    <span>${entry.sudsAfter}</span>
-                                </div>
-                            </div>
-
-                            <div class="md:w-1/3 border-t md:border-t-0 md:border-l border-slate-100 pt-3 md:pt-0 md:pl-4">
-                                <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">生理变化</div>
-                                ${physioHtml}
-                            </div>
-                        </div>
-                    </div>
-                `;
-                container.insertAdjacentHTML('beforeend', html);
-            });
-        }
-
-        function renderStats() {
-            const methodStats = {};
-
-            entries.forEach(e => {
-                if (!methodStats[e.method]) {
-                    methodStats[e.method] = { count: 0, totalDrop: 0, method: e.method };
-                }
-                methodStats[e.method].count++;
-                methodStats[e.method].totalDrop += e.sudsDrop;
-            });
-
-            const ranking = Object.values(methodStats)
-                .map(item => ({
-                    ...item,
-                    avgDrop: (item.totalDrop / item.count).toFixed(1)
-                }))
-                .filter(item => item.count >= 1 && item.avgDrop > 0)
-                .sort((a, b) => b.avgDrop - a.avgDrop)
-                .slice(0, 3);
-
-            const container = document.getElementById('leaderboardContainer');
-            container.innerHTML = '';
-
-            ranking.forEach((item, index) => {
-                const html = `
-                    <div class="bg-sage-50/50 border border-sage-100 p-4 rounded-xl flex items-center justify-between relative overflow-hidden">
-                        <div class="absolute -right-4 -top-4 text-6xl opacity-10 select-none">${getMethodIcon(item.method)}</div>
-                        <div>
-                            <div class="text-xs text-sage-600 font-bold mb-1">No.${index + 1} 推荐</div>
-                            <div class="font-bold text-slate-700 truncate max-w-[100px] sm:max-w-full">${item.method}</div>
-                            <div class="text-[10px] text-slate-400 mt-1">已练习 ${item.count} 次</div>
-                        </div>
-                        <div class="text-right z-10">
-                            <div class="text-xl font-bold text-sage-600">-${item.avgDrop}</div>
-                            <div class="text-[10px] text-sage-400">平均降幅</div>
-                        </div>
-                    </div>
-                `;
-                container.insertAdjacentHTML('beforeend', html);
-            });
-            if(ranking.length === 0) {
-                 container.innerHTML = '<div class="col-span-full text-center py-4 text-slate-400 text-sm">目前还没有产生积极效果的数据，继续尝试！</div>';
-            }
-        }
-
-        function renderChart() {
-            const ctx = document.getElementById('trendChart').getContext('2d');
-            const chartData = [...entries].reverse().slice(-15);
-            
-            const labels = chartData.map(e => {
-                const d = new Date(e.timestamp);
-                return `${d.getMonth()+1}/${d.getDate()}`;
-            });
-            const dataBefore = chartData.map(e => e.sudsBefore);
-            const dataAfter = chartData.map(e => e.sudsAfter);
-
-            if (chartInstance) chartInstance.destroy();
-
-            chartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: '放松前',
-                            data: dataBefore,
-                            borderColor: '#cbd5e1',
-                            borderWidth: 2,
-                            borderDash: [4, 4],
-                            pointRadius: 0,
-                            pointHoverRadius: 4,
-                            tension: 0.3
-                        },
-                        {
-                            label: '放松后',
-                            data: dataAfter,
-                            borderColor: '#38b0a0',
-                            backgroundColor: 'rgba(56, 176, 160, 0.05)',
-                            borderWidth: 2,
-                            fill: true,
-                            pointBackgroundColor: '#fff',
-                            pointBorderColor: '#38b0a0',
-                            pointRadius: 4,
-                            tension: 0.3
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                            titleColor: '#1e293b',
-                            bodyColor: '#475569',
-                            borderColor: '#e2e8f0',
-                            borderWidth: 1,
-                            padding: 12,
-                            displayColors: true,
-                            boxWidth: 8,
-                            callbacks: {
-                                afterBody: function(tooltipItems) {
-                                    const index = tooltipItems[0].dataIndex;
-                                    const entry = chartData[index];
-                                    let lines = [];
-                                    if(entry.hrBefore && entry.hrAfter) {
-                                        const hrDrop = entry.hrBefore - entry.hrAfter;
-                                        lines.push(`心率: ${entry.hrBefore}→${entry.hrAfter} (${hrDrop > 0 ? '↓'+hrDrop : (hrDrop < 0 ? '↑'+Math.abs(hrDrop) : '无变化')})`);
-                                    }
-                                    if(entry.bpSysBefore && entry.bpSysAfter) {
-                                        lines.push(`血压: ${entry.bpSysBefore}/${entry.bpDiaBefore}→${entry.bpSysAfter}/${entry.bpDiaAfter}`);
-                                    }
-                                    return lines.length ? '\n\n— 生理数据 —\n' + lines.join('\n') : '';
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 10,
-                            grid: { color: '#f8fafc' },
-                            ticks: { font: {size: 10}, stepSize: 2 }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { font: {size: 10}, maxRotation: 0 }
-                        }
-                    }
-                }
-            });
-        }
-
-        function getMethodIcon(method) {
-            if (method.includes('呼吸')) return '🌬️';
-            if (method.includes('肌肉')) return '💪';
-            if (method.includes('冥想')) return '🧘';
-            if (method.includes('瑜伽')) return '🤸';
-            if (method.includes('运动')) return '🏃';
-            if (method.includes('书写')) return '✍️';
-            if (method.includes('音乐')) return '🎧';
-            if (method.includes('意象')) return '🏞️';
-            if (method.includes('自我放松')) return '😴';
-            if (method.includes('太极') || method.includes('气功')) return '☯️';
-            return '✨';
-        }
-
-        function clearAllData() {
-            const confirmation = window.confirm('确定要清除所有历史记录吗？此操作无法撤销。');
-            if(confirmation) {
-                localStorage.removeItem(STORAGE_KEY);
-                entries = [];
-                renderApp();
-            }
-        }
-
-        // 首次加载应用
-        const dateDisplay = document.getElementById('currentDate');
-        dateDisplay.textContent = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
-        renderApp();
     </script>
 </body>
 </html>
